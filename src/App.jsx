@@ -2851,8 +2851,20 @@ function Footer() {
         reproduce, share, or create derivative products from any report, framework, content, or methodology
         provided through this service.
       </p>
-      <p className="mt-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: COLORS.FAINT }}>
-        © 2026 Nyimma Bartee | All Rights Reserved | Terms | Privacy
+      <p className="mt-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: COLORS.<div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.LINE}` }}>
+  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", letterSpacing: "0.1em", color: COLORS.GOLD, marginBottom: "10px" }}>
+    GO DEEPER WITH CONVERGENCE
+  </p>
+  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12.5px", lineHeight: 1.6, color: COLORS.MUTED, marginBottom: "12px" }}>
+    This app is free to use. Want to go further?
+  </p>
+  <div className="flex flex-wrap gap-2">
+    <a href="https://buy.stripe.com/9B628s5GN9A3csFeRUbfO02" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ background: COLORS.GOLD, color: COLORS.INK, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Full Written Report (PDF) — $20</a>
+    <a href="https://buy.stripe.com/eVqcN6c5bbIb9gt8twbfO01" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ background: COLORS.BRAND, color: COLORS.PAPER, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Learn Convergence — $250</a>
+    <a href="https://buy.stripe.com/9B69AU6KRcMfgIV114bfO00" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ border: `1px solid ${COLORS.GOLD}`, color: COLORS.GOLD, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Full Membership — $1,200/yr</a>
+  </div>
+</div>
+  © 2026 Nyimma Bartee | All Rights Reserved | Terms | Privacy
       </p>
     </div>
   );
@@ -3518,7 +3530,7 @@ function Signature({ onContinue }) {
         <style>{FONT_IMPORT}</style>
         <div className="w-full max-w-md flex flex-col gap-5 text-center items-center">
           <div className="px-3 py-1.5 rounded-full" style={{ background: "#FBEAEA", border: `1px solid ${COLORS.RED}` }}>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: "#5C2020" }}>GENERATED FROM YOUR ANSWERS</span>
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: "#5C2020" }}
           </div>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(24px, 5.5vw, 32px)", fontWeight: 700, lineHeight: 1.25, color: COLORS.INK }}>
             You investigate before you believe.
