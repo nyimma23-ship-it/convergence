@@ -67,44 +67,61 @@ const PRECISION_BACKEND_URL =  "https://nyimma23.pythonanywhere.com";
 // isn't connected or doesn't recognize the place, and the built-in city
 // table takes over from there.
 async function fetchGeocode(locationStr, birthDate, birthTime) {
-  if (!PRECISION_BACKEND_URL || !locationStr) return null;
-  const params = new URLSearchParams({ q: locationStr, date: birthDate || "", time: birthTime || "" });
-  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
-  try {
-    const res = await fetch(`${PRECISION_BACKEND_URL}/api/convergence/geocode?${params}`, controller ? { signal: controller.signal } : undefined);
-    if (timeoutId) clearTimeout(timeoutId);
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (!data || !data.found) return null;
-    return data;
-  } catch (e) {
-    if (timeoutId) clearTimeout(timeoutId);
-    return null;
-  }
+    if (!PRECISION_BACKEND_URL || !locationStr) return null;
+    const params = new URLSearchParams({ q: locationStr, date: birthDate || "", time: birthTime || "" });
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
+    try {
+        const res = await fetch(PRECISION_BACKEND_URL + "/api/convergence/geocode?" + params, { signal: controller ? controller.signal }
+        if (timeoutId) clearTimeout(timeoutId);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data || !data.found) return null;
+        return data;
+    } catch (e) {
+        if (timeoutId) clearTimeout(timeoutId);
+        return null;
+    }
+}
+async function fetchPrecision(birthdate, utHours, lat, lon) {
+    if (!PRECISION_BACKEND_URL || !birthdate) return null;
+    var parts = birthdate.split("-");
+    var y = parseInt(parts[0]);
+    var m = parseInt(parts[1]);
+    var d = parseInt(parts[2]);
+    var params = "year=" + y + "&month=" + m + "&day=" + d + "&ut_hours=" + utHours + "&lat=" + lat;
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 4000);
+    try {
+        var posUrl = PRECISION_BACKEND_URL + "/api/convergence/positions?" + params;
+        var hdUrl = PRECISION_BACKEND_URL + "/api/convergence/humandesign?" + params;
+        var posRes = await fetch(posUrl, { signal: controller.signal });
+        var hdRes = await fetch(hdUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        var positions = null;
+        var humanDesign = null;
+        if (posRes.ok) {
+            positions = await posRes.json();
+        }
+        if (hdRes.ok) {
+            humanDesign = await hdRes.json();
+        }
+        if (!positions) return null;
+        positions.humanDesign = humanDesign;
+        return positions;
+    } catch (e) {
+        clearTimeout(timeoutId);
+        return null;
+    }
 }
 
-async function fetchPrecision(birthDate, utHours, lat, lon) {
-  if (!PRECISION_BACKEND_URL || !birthDate) return null;
-  const [y, m, d] = birthDate.split("-").map(Number);
-  const params = new URLSearchParams({ year: y, month: m, day: d, ut_hours: utHours, lat, lon });
-  // A hanging backend shouldn't stall someone's report. If it doesn't answer
-  // within 4 seconds, abort and let the verified built-in math take over,
-  // exactly the same path used when the URL is blank or the server is down.
-  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-  const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
-  try {
-    const res = await fetch(`${PRECISION_BACKEND_URL}/api/convergence/positions?${params}`, controller ? { signal: controller.signal } : undefined);
-    if (timeoutId) clearTimeout(timeoutId);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (e) {
-    if (timeoutId) clearTimeout(timeoutId);
-    return null;
-  }
-}
-
-
+// One accent color per system, used on section cards, eyebrows, and jump
+// chips so each system is recognizable at a glance without reading labels.
+// All chosen to sit naturally in the existing paper/ink/gold world.
+const SYSTEM_COLORS = {
+tropical: "#9E7E3D", // gold, the anchor
+wari: "#A9A9A9", // gold, the anchor
+};
 // One accent color per system, used on section cards, eyebrows, and jump
 // chips so each system is recognizable at a glance without reading labels.
 // All chosen to sit naturally in the existing paper/ink/gold world.
@@ -1444,7 +1461,17 @@ function buildProfile({ userName, birthDate, birthTime, birthLocation, exactCoor
   const draconic = generateChartLayer(rng, sunSign, { soul: true, real, nodeOffset, reuseAngles: { ascendant: tropical.ascendant, midheaven: tropical.midheaven } });
   const birthYear = birthDate ? new Date(birthDate + "T00:00:00").getFullYear() : 1996;
   const vedic = (real && real.Moon ? computeVedicTiming(real.Moon.lon, birthDate) : null) || generateVedicTiming(rng, birthYear);
-  const humanDesign = generateHumanDesign(rng);
+let humanDesign;
+
+if (precision?.humanDesign) {
+humanDesign = {
+...precision.humanDesign,
+basis: "computed"
+};
+} else {
+humanDesign = generateHumanDesign(rng);
+}
+
 
   // Seeded true/false "agreement" flags reused across the UI so a given
   // user's report is internally consistent every time it's viewed.
