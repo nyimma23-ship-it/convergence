@@ -3534,7 +3534,9 @@ function Signature({ onContinue }) {
         <style>{FONT_IMPORT}</style>
         <div className="w-full max-w-md flex flex-col gap-5 text-center items-center">
           <div className="px-3 py-1.5 rounded-full" style={{ background: "#FBEAEA", border: `1px solid ${COLORS.RED}` }}>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: "#5C2020" }}
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: "#5C2020" }}>
+               CONVERGENCE
+            </span>
           </div>
           <h1 style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(24px, 5.5vw, 32px)", fontWeight: 700, lineHeight: 1.25, color: COLORS.INK }}>
             You investigate before you believe.
