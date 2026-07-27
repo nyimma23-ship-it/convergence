@@ -66,13 +66,13 @@ const PRECISION_BACKEND_URL =  "https://nyimma23.pythonanywhere.com";
 // timezone database, which a browser doesn't. Returns null if the backend
 // isn't connected or doesn't recognize the place, and the built-in city
 // table takes over from there.
-async function fetchGeocode(locationStr, birthDate, birthTime) {
-    if (!PRECISION_BACKEND_URL || !locationStr) return null;
-    const params = new URLSearchParams({ q: locationStr, date: birthDate || "", time: birthTime || "" });
+async function fetchGeocode(locationstr, birthDate, birthTime) {
+    if (!PRECISION_BACKEND_URL || !locationstr) return null;
+    const params = new URLSearchParams({ q: locationstr, date: birthDate || "", time: birthTime || "" });
     const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
     const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
     try {
-        const res = await fetch(PRECISION_BACKEND_URL + "/api/convergence/geocode?" + params, { signal: controller ? controller.signal }
+        const res = await fetch(PRECISION_BACKEND_URL + "/api/convergence/geocode?" + params, { signal: controller ? controller.signal : undefined });
         if (timeoutId) clearTimeout(timeoutId);
         if (!res.ok) return null;
         const data = await res.json();
@@ -83,6 +83,7 @@ async function fetchGeocode(locationStr, birthDate, birthTime) {
         return null;
     }
 }
+
 async function fetchPrecision(birthdate, utHours, lat, lon) {
     if (!PRECISION_BACKEND_URL || !birthdate) return null;
     var parts = birthdate.split("-");
@@ -115,6 +116,10 @@ async function fetchPrecision(birthdate, utHours, lat, lon) {
     }
 }
 
+const SYSTEM_COLORS = {
+    tropical: "#9E7E3D",
+    wari: "#9A9A9A"
+};       
 // One accent color per system, used on section cards, eyebrows, and jump
 // chips so each system is recognizable at a glance without reading labels.
 // All chosen to sit naturally in the existing paper/ink/gold world.
