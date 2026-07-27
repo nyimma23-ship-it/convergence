@@ -2831,72 +2831,48 @@ function ContinueButton({ label, onClick, closing }) {
 }
 
 function Footer() {
-  return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8" style={{ borderTop: `1px solid ${COLORS.LINE}` }}>
-      <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", lineHeight: 1.7, color: COLORS.FAINT }}>
-        © 2026 Nyimma Bartee. All rights reserved.
-      </p>
-      <p className="mt-2" style={{ fontFamily: "'Inter', sans-serif", fontSize: "10.5px", lineHeight: 1.7, color: COLORS.FAINT }}>
-        "Convergence" and "The Convergence Method" are original frameworks created by Nyimma Bartee. All content,
-        written materials, reports, designs, graphics, software, methodology, and the underlying framework on
-        this website are the intellectual property of Nyimma Bartee and may not be copied, reproduced,
-        distributed, modified, or used commercially, in whole or in part, without written permission.
-      </p>
-      <p className="mt-2" style={{ fontFamily: "'Inter', sans-serif", fontSize: "10.5px", lineHeight: 1.7, color: COLORS.FAINT }}>
-        This website and its reports are provided for personal reflection and educational purposes. They are not
-        intended as medical, legal, financial, or professional advice.
-      </p>
-      <p className="mt-2" style={{ fontFamily: "'Inter', sans-serif", fontSize: "10.5px", lineHeight: 1.7, color: COLORS.FAINT }}>
-        Reports generated through this platform are licensed for individual use only. You may not resell,
-        reproduce, share, or create derivative products from any report, framework, content, or methodology
-        provided through this service.
-      </p>
-        
+   return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8" style={{ borderTop: `1px solid ${COLORS.LINE}` }}>
+         <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", lineHeight: 1.7, color: COLORS.FAINT }}>
+            © 2026 Nyimma Bartee. All rights reserved.
+            </p>
+            <p className="mt-2" style={{ fontFamily: "'Inter', sans-serif", fontSize: "10.5px", lineHeight: 1.7, color: COLORS.FAINT }}>
+               "Convergence" and "The Convergence Method" are original frameworks created by Nyimma Bartee. All content,
+               written materials, reports, designs, graphics, software, methodology, and the underlying framework on
+               this website are the intellectual property of Nyimma Bartee and may not be copied, reproduced,
+               distributed, modified, or used commercially, in whole or in part, without written permission.
+               </p>
+               <p className="mt-2" style={{ fontFamily: "'Inter', sans-serif", fontSize: "10.5px", lineHeight: 1.7, color: COLORS.FAINT }}>
+               This website and its reports are provided for personal reflection and educational purposes. They are not
+               intended as medical, legal, financial, or professional advice.
+               </p>
+               <p className="mt-2" style={{ fontFamily: "'Inter', sans-serif", fontSize: "10.5px", lineHeight: 1.7, color: COLORS.FAINT }}>
+               Reports generated through this platform are licensed for individual use only. You may not resell,
+               reproduce, share, or create derivative products from any report, framework, content, or methodology
+               provided through this service.
+               </p>
 
-      <     </p>
-           </p>
+               <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.LINE}` }}>
+                  <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", letterSpacing: "0.1em", color: COLORS.GOLD, marginBottom: "10px" }}>
+                     GO DEEPER WITH CONVERGENCE
+                  </p>
+                  <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12.5px", lineHeight: 1.6, color: COLORS.MUTED, marginBottom: "12px" }}>
+                     This app is free to use. Want to go further?
+                     </p>
+                     <div className="flex flex-wrap gap-2">
+                        <a href="https://buy.stripe.com/9B628s5GN9A3csFeRUbfO02" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ background: COLORS.GOLD, color: COLORS.INK, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Full Written Report (PDF) — $20</a>
+                        <a href="https://buy.stripe.com/eVqcN6c5bbIb9gt8twbfO01" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ background: COLORS.BRAND, color: COLORS.PAPER, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Learn Convergence — $250</a>
+                        <a href="https://buy.stripe.com/9B69AU6KRcMfgIV114bfO00" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ border: `1px solid ${COLORS.GOLD}`, color: COLORS.GOLD, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Full Membership — $1,200/yr</a>
+                        </div>
+                     </div>
 
-      <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.LINE}` }}>
-        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", letterSpacing: "0.1em", color: COLORS.GOLD, marginBottom: "10px" }}>
-          GO DEEPER WITH CONVERGENCE
-        </p>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12.5px", lineHeight: 1.6, color: COLORS.MUTED, marginBottom: "12px" }}>
-          This app is free to use. Want to go further?
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <a href="https://buy.stripe.com/9B628s5GN9A3csFeRUbfO02" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ background: COLORS.GOLD, color: COLORS.INK, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Full Written Report (PDF) — $20</a>
-          <a href="https://buy.stripe.com/eVqcN6c5bbIb9gt8twbfO01" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ background: COLORS.BRAND, color: COLORS.PAPER, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Learn Convergence — $250</a>
-          <a href="https://buy.stripe.com/9B69AU6KRcMfgIV114bfO00" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ border: `1px solid ${COLORS.GOLD}`, color: COLORS.GOLD, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Full Membership — $1,200/yr</a>
-        </div>
-      </div>
+                     <p className="mt-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: COLORS.FAINT }}>
+                        © 2026 Nyimma Bartee | All Rights Reserved | Terms | Privacy
+                        </p>
+                     </div>
+                 );
+               }
 
-      <p className="mt-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: COLORS.FAINT }}>
-        © 2026 Nyimma Bartee | All Rights Reserved | Terms | Privacy
-      </p>
-
-
-       <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${COLORS.LINE}` }}>
-
-        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", letterSpacing: "0.1em", color: COLORS.GOLD, marginBottom: "10px" }}>
-          GO DEEPER WITH CONVERGENCE
-        </p>
-        <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "12.5px", lineHeight: 1.6, color: COLORS.MUTED, marginBottom: "12px" }}>
-          This app is free to use. Want to go further?
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <a href="https://buy.stripe.com/9B628s5GN9A3csFeRUbfO02" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ background: COLORS.GOLD, color: COLORS.INK, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Full Written Report (PDF) — $20</a>
-          <a href="https://buy.stripe.com/eVqcN6c5bbIb9gt8twbfO01" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ background: COLORS.BRAND, color: COLORS.PAPER, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Learn Convergence — $250</a>
-          <a href="https://buy.stripe.com/9B69AU6KRcMfgIV114bfO00" target="_blank" rel="noopener" className="px-4 py-2 rounded-full" style={{ border: `1px solid ${COLORS.GOLD}`, color: COLORS.GOLD, fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", textDecoration: "none" }}>Full Membership — $1,200/yr</a>
-        </div>
-      </div>
-
-      <p className="mt-3" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.04em", color: COLORS.FAINT }}>
-        © 2026 Nyimma Bartee | All Rights Reserved | Terms | Privacy
-      </p>
-
-    </div>
-  );
-}
 
 // ==== components/entry/Intro.jsx ====
 const SYSTEMS = [
