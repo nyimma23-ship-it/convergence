@@ -61,42 +61,83 @@ const SOFT_SHADOW = "0 1px 2px rgba(34,36,42,0.04), 0 2px 8px rgba(34,36,42,0.06
 const PRECISION_BACKEND_URL = "https://nyimma23.pythonanywhere.com";
 
 async function fetchGeocode(locationstr, birthDate, birthTime) {
-if (!PRECISION_BACKEND_URL || !locationstr) return null;
+    if (!PRECISION_BACKEND_URL || !locationstr) return null;
 
-const params = new URLSearchParams({
-q: locationstr,
-date: birthDate || "",
-time: birthTime || ""
-});
+    const params = new URLSearchParams({
+        q: locationstr,
+        date: birthDate || "",
+        time: birthTime || ""
+    });
 
-const controller =
-typeof AbortController !== "undefined"
-? new AbortController()
-: null;
+    const controller = typeof AbortController !== "undefined"
+        ? new AbortController()
+        : null;
 
-const timeoutId = controller
-? setTimeout(() => controller.abort(), 5000)
-: null;
+    const timeoutId = controller
+        ? setTimeout(() => controller.abort(), 5000)
+        : null;
 
-try {
-const res = await fetch(
-PRECISION_BACKEND_URL + "/api/convergence/geocode?" + params,
-{ signal: controller ? controller.signal : undefined }
+    try {
+        const res = await fetch(
+            PRECISION_BACKEND_URL + "/api/convergence/geocode?" + params,
+            { signal: controller ? controller.signal : undefined }
+        );
+        if (timeoutId) clearTimeout(timeoutId);
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (!data || !data.found) return null;
+        return data;
+    } catch (e) {
+        if (timeoutId) clearTimeout(timeoutId);
+        return null;
+    }
+}
+
+async function fetchPrecision(birthdate, utHours, lat, lon) {
+    if (!PRECISION_BACKEND_URL || !birthdate) return null;
+    var parts = birthdate.split("-");
+    var y = parseInt(parts[0]);
+    var m = parseInt(parts[1]);
+    var d = parseInt(parts[2]);
+    var params = "year=" + y + "&month=" + m + "&day=" + d + "&ut_hours=" + utHours + "&lat=" + lat;
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 4000);
+    try {
+        var posUrl = PRECISION_BACKEND_URL + "/api/convergence/positions?" + params;
+        var hdUrl = PRECISION_BACKEND_URL + "/api/convergence/humandesign?" + params;
+        var posRes = await fetch(posUrl, { signal: controller.signal });
+        var hdRes = await fetch(hdUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        var positions = null;
+        var humanDesign = null;
+        if (posRes.ok) {
+            positions = await posRes.json();
+        }
+        if (hdRes.ok) {
+            humanDesign = await hdRes.json();
+        }
+        if (!positions) return null;
+        positions.humanDesign = humanDesign;
+        return positions;
+    } catch (e) {
+        clearTimeout(timeoutId);
+        return null;
+    }
+}
 
 // One accent color per system, used on section cards, eyebrows, and jump
 // chips so each system is recognizable at a glance without reading labels.
 // All chosen to sit naturally in the existing paper/ink/gold world.
 const SYSTEM_COLORS = {
-  tropical: "#9E7E3D",   // gold, the anchor
-  vedic: "#B0562F",      // terracotta
-  draconic: "#6E4A7E",   // plum
-  numerology: "#2F6F6A", // deep teal
-  chinese: "#A63A3A",    // brick red
-  humanDesign: "#7C5CB0",// violet
-  mbti: "#46628A",       // slate blue
-  enneagram: "#A63A3A",  // brick red
+    tropical: "#9E7E3D",   // gold, the anchor
+    vedic: "#B0562F",      // terracotta
+    draconic: "#6E4A7E",   // plum
+    numerology: "#2F6F6A", // deep teal
+    chinese: "#A63A3A",    // brick red
+    humanDesign: "#7C5CB0",// violet
+    mbti: "#46628A",       // slate blue
+    enneagram: "#A63A3A",  // brick red
 };
-
 // The three relationships between independent observations. Not "these
 // systems agree or disagree", these are three distinct, meaningful findings
 // in their own right: a structural pattern reinforced from two directions, a
