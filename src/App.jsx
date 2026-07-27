@@ -58,83 +58,31 @@ const SOFT_SHADOW = "0 1px 2px rgba(34,36,42,0.04), 0 2px 8px rgba(34,36,42,0.06
 // the Ascendant, Midheaven, Vertex, Chiron, Lilith, and the true North Node
 // come from Swiss Ephemeris. When it's blank or unreachable, the built-in
 // verified math takes over automatically, nothing breaks. ----
-const PRECISION_BACKEND_URL =  "https://nyimma23.pythonanywhere.com";
-
-// Ask the backend to resolve a place name into coordinates plus the true
-// historical UTC offset for that date. This is what removes any need to type
-// coordinates: the server has a real geocoder and the full historical
-// timezone database, which a browser doesn't. Returns null if the backend
-// isn't connected or doesn't recognize the place, and the built-in city
-// table takes over from there.
-async function fetchGeocode(locationstr, birthDate, birthTime) {
-    if (!PRECISION_BACKEND_URL || !locationstr) return null;
-    const params = new URLSearchParams({ q: locationstr, date: birthDate || "", time: birthTime || "" });
-    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
-    try {
-        const PRECISION_BACKEND_URL = "https://nyimma23.pythonanywhere.com";
+const PRECISION_BACKEND_URL = "https://nyimma23.pythonanywhere.com";
 
 async function fetchGeocode(locationstr, birthDate, birthTime) {
-    if (!PRECISION_BACKEND_URL || !locationstr) return null;
-    const params = new URLSearchParams({ q: locationstr, date: birthDate || "", time: birthTime || "" });
-    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-    const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
-    try {
-        const res = await fetch(PRECISION_BACKEND_URL + "/api/convergence/geocode?" + params, { signal: controller ? controller.signal : undefined });
-        if (timeoutId) clearTimeout(timeoutId);
-        if (!res.ok) return null;
-        const data = await res.json();
-        if (!data || !data.found) return null;
-        return data;
-    } catch (e) {
-        if (timeoutId) clearTimeout(timeoutId);
-        return null;
-    }
-}
+if (!PRECISION_BACKEND_URL || !locationstr) return null;
 
-async function fetchPrecision(birthdate, utHours, lat, lon) {
-    if (!PRECISION_BACKEND_URL || !birthdate) return null;
-    var parts = birthdate.split("-");
-    var y = parseInt(parts[0]);
-    var m = parseInt(parts[1]);
-    var d = parseInt(parts[2]);
-    var params = "year=" + y + "&month=" + m + "&day=" + d + "&ut_hours=" + utHours + "&lat=" + lat;
-    var controller = new AbortController();
-    var timeoutId = setTimeout(function() { controller.abort(); }, 4000);
-    try {
-        var posUrl = PRECISION_BACKEND_URL + "/api/convergence/positions?" + params;
-        var hdUrl = PRECISION_BACKEND_URL + "/api/convergence/humandesign?" + params;
-        var posRes = await fetch(posUrl, { signal: controller.signal });
-        var hdRes = await fetch(hdUrl, { signal: controller.signal });
-        clearTimeout(timeoutId);
-        var positions = null;
-        var humanDesign = null;
-        if (posRes.ok) {
-            positions = await posRes.json();
-        }
-        if (hdRes.ok) {
-            humanDesign = await hdRes.json();
-        }
-        if (!positions) return null;
-        positions.humanDesign = humanDesign;
-        return positions;
-    } catch (e) {
-        clearTimeout(timeoutId);
-        return null;
-    }
-}
+const params = new URLSearchParams({
+q: locationstr,
+date: birthDate || "",
+time: birthTime || ""
+});
 
-const SYSTEM_COLORS = {
-    tropical: "#9E7E3D",
-    wari: "#9A9A9A"
-};
-// One accent color per system, used on section cards, eyebrows, and jump
-// chips so each system is recognizable at a glance without reading labels.
-// All chosen to sit naturally in the existing paper/ink/gold world.
-const SYSTEM_COLORS = {
-tropical: "#9E7E3D", // gold, the anchor
-wari: "#A9A9A9", // gold, the anchor
-};
+const controller =
+typeof AbortController !== "undefined"
+? new AbortController()
+: null;
+
+const timeoutId = controller
+? setTimeout(() => controller.abort(), 5000)
+: null;
+
+try {
+const res = await fetch(
+PRECISION_BACKEND_URL + "/api/convergence/geocode?" + params,
+{ signal: controller ? controller.signal : undefined }
+
 // One accent color per system, used on section cards, eyebrows, and jump
 // chips so each system is recognizable at a glance without reading labels.
 // All chosen to sit naturally in the existing paper/ink/gold world.
