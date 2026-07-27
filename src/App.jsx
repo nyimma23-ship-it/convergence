@@ -2905,11 +2905,17 @@ parseExactCoords(exactCoords) ? (
 {parseExactCoords(exactCoords).lon > 0 ? " (Positive longitude reads as east of Greenwich.)" : ""}
 </p>
 ) : (
-<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: COLORS.RED }}>
-Not readable yet. Format: two numbers separated by a comma, west longitude negative.
+<p
+  style={{
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "10.5px",
+    color: COLORS.RED
+  }}
+>
+  Not readable yet. Format: two numbers separated by a comma, west longitude negative.
 </p>
 )}
-)}
+)} 
 </div>
 </details>
 )}
