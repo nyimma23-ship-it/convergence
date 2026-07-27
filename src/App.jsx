@@ -2899,23 +2899,34 @@ value={exactCoords || ""}
 onChange={setExactCoords}
 />
 {exactCoords && exactCoords.trim().length > 2 && (
-parseExactCoords(exactCoords) ? (
-<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: "#3F7D5C" }}>
-✓ Using {parseExactCoords(exactCoords).lat}°, {parseExactCoords(exactCoords).lon}° exactly.
-{parseExactCoords(exactCoords).lon > 0 ? " (Positive longitude reads as east of Greenwich.)" : ""}
-</p>
-) : (
-<p
-  style={{
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: "10.5px",
-    color: COLORS.RED
-  }}
->
-  Not readable yet. Format: two numbers separated by a comma, west longitude negative.
-</p>
+  <>
+    {parseExactCoords(exactCoords) ? (
+      <p
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "10.5px",
+          color: "#3F7D5C",
+        }}
+      >
+        ✓ Using {parseExactCoords(exactCoords).lat}°,{" "}
+        {parseExactCoords(exactCoords).lon}° exactly.
+        {parseExactCoords(exactCoords).lon > 0
+          ? " (Positive longitude reads as east of Greenwich.)"
+          : ""}
+      </p>
+    ) : (
+      <p
+        style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: "10.5px",
+          color: COLORS.RED,
+        }}
+      >
+        Not readable yet. Format: two numbers separated by a comma, west longitude negative.
+      </p>
+    )}
+  </>
 )}
-)} 
 </div>
 </details>
 )}
