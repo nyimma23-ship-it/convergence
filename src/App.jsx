@@ -66,22 +66,38 @@ async function fetchGeocode(locationstr, birthDate, birthTime) {
 // ---- fetchPrecision (FIXED: uses URLSearchParams with date) ----
 async function fetchPrecision(birthdate, utHours, lat, lon) {
     if (!PRECISION_BACKEND_URL || !birthdate) return null;
-    const params = new URLSearchParams({
-        date: birthdate,
-        ut_hours: utHours,
-        lat: lat,
-        lon: lon
+    
+    // Use EXACTLY the same format that was working before
+    const [y, m, d] = birthdate.split("-").map(Number);
+    const params = new URLSearchParams({ 
+        year: y, 
+        month: m, 
+        day: d, 
+        ut_hours: utHours, 
+        lat: lat 
     });
+    
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const timeoutId = setTimeout(function() { controller.abort(); }, 4000);
+    
     try {
-        const posUrl = PRECISION_BACKEND_URL + "/api/convergence/positions?" + params;
-        const hdUrl = PRECISION_BACKEND_URL + "/api/convergence/humandesign?" + params;
-        const posRes = await fetch(posUrl, { signal: controller.signal });
-        const hdRes = await fetch(hdUrl, { signal: controller.signal });
+        // First fetch - positions (this was working before)
+        const posRes = await fetch(
+            PRECISION_BACKEND_URL + "/api/convergence/positions?" + params,
+            { signal: controller.signal }
+        );
+        
+        // Second fetch - humanDesign (NEW, but using same params)
+        const hdRes = await fetch(
+            PRECISION_BACKEND_URL + "/api/convergence/humandesign?" + params,
+            { signal: controller.signal }
+        );
+        
         clearTimeout(timeoutId);
+        
         const positions = posRes.ok ? await posRes.json() : null;
         const humanDesign = hdRes.ok ? await hdRes.json() : null;
+        
         if (!positions) return null;
         positions.humanDesign = humanDesign;
         return positions;
@@ -90,7 +106,6 @@ async function fetchPrecision(birthdate, utHours, lat, lon) {
         return null;
     }
 }
-
 // ---- system colors ----
 const SYSTEM_COLORS = {
     tropical: "#9E7E3D",
