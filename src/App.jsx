@@ -43,29 +43,78 @@ const SOFT_SHADOW = "0 1px 2px rgba(34,36,42,0.04), 0 2px 8px rgba(34,36,42,0.06
 
 const PRECISION_BACKEND_URL = "https://nyimma23.pythonanywhere.com";
 
-async function fetchGeocode(locationstr, birthDate, birthTime) {
-if (!PRECISION_BACKEND_URL || !locationstr) return null;
-const params = new URLSearchParams({
-q: locationstr,
-date: birthDate || "",
-time: birthTime || ""
-});
-const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-const timeoutId = controller ? setTimeout(() => controller.abort(), 5000) : null;
+// ---------- birthplace search (Open-Meteo geocoding, no API key) ----------
+// Same engine Three Skies uses. Resolves any town worldwide, including small
+// ones like Nyack NY that a hardcoded city list would miss.
+const GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search";
+
+async function searchPlaces(query, signal) {
+if (!query || query.trim().length < 2) return [];
+const url = GEOCODE_URL + "?count=6&language=en&format=json&name=" + encodeURIComponent(query.trim());
 try {
-const res = await fetch(
-PRECISION_BACKEND_URL + "/api/convergence/geocode?" + params,
-{ signal: controller ? controller.signal : undefined }
-);
-if (timeoutId) clearTimeout(timeoutId);
-if (!res.ok) return null;
+const res = await fetch(url, signal ? { signal } : {});
+if (!res.ok) return [];
 const data = await res.json();
-if (!data || !data.found) return null;
-return data;
+const results = (data && data.results) || [];
+return results.map((r) => ({
+lat: r.latitude,
+lon: r.longitude,
+timezone: r.timezone || null,
+name: r.name,
+region: [r.admin1, r.country].filter(Boolean).join(", "),
+label: [r.name, r.admin1, r.country].filter(Boolean).join(", "),
+}));
 } catch (e) {
-if (timeoutId) clearTimeout(timeoutId);
+return [];
+}
+}
+
+// Resolves the true UTC offset for an IANA zone at a specific historical
+// moment, so births before/after a DST rule change get the correct offset.
+function tzOffsetHours(timezone, y, mo, d, h, mi) {
+if (!timezone) return null;
+try {
+const date = new Date(Date.UTC(y, mo - 1, d, h, mi));
+const dtf = new Intl.DateTimeFormat("en-US", {
+timeZone: timezone,
+hour12: false,
+year: "numeric",
+month: "2-digit",
+day: "2-digit",
+hour: "2-digit",
+minute: "2-digit",
+});
+const parts = {};
+dtf.formatToParts(date).forEach((x) => {
+if (x.type !== "literal") parts[x.type] = x.value;
+});
+let hr = parseInt(parts.hour, 10);
+if (hr === 24) hr = 0;
+const asUTC = Date.UTC(parseInt(parts.year, 10), parseInt(parts.month, 10) - 1, parseInt(parts.day, 10), hr, parseInt(parts.minute, 10));
+return Math.round(((asUTC - date.getTime()) / 3600000) * 4) / 4;
+} catch (e) {
 return null;
 }
+}
+
+// Turns a chosen place plus the birth moment into the geocode object
+// buildProfile already knows how to consume.
+function placeToGeocode(place, birthDate, birthTime) {
+if (!place || typeof place.lat !== "number" || typeof place.lon !== "number") return null;
+let utcOffset = null;
+if (place.timezone && birthDate) {
+const [y, mo, d] = birthDate.split("-").map(Number);
+const [h, mi] = (birthTime || "12:00").split(":").map(Number);
+utcOffset = tzOffsetHours(place.timezone, y, mo, d, h, mi);
+}
+return {
+found: true,
+lat: place.lat,
+lon: place.lon,
+utc_offset: typeof utcOffset === "number" ? utcOffset : undefined,
+label: place.label || place.name,
+timezone: place.timezone || null,
+};
 }
 
 async function fetchPrecision(birthdate, utHours, lat, lon) {
@@ -878,47 +927,60 @@ return `${framing} ${signPart} ${housePart}`.trim();
 }
 
 // ---------- Vedic interpretation helper ----------
-function vedicInterpretation(graha, isMaha) {
-const interpretations = {
-Sun: {
-maha: "Your Sun Mahadasha is a period of self-discovery and leadership. This is when you're meant to step into your own authority and be seen for who you really are, not who you've been playing. Challenges during this period are usually about ego and pride, not about your actual ability.",
-bhukti: "Under the Sun sub-period, your identity is being refined. You're being asked to show up as yourself, not as who others expect you to be."
-},
-Moon: {
-maha: "Your Moon Mahadasha is a period of emotional deepening and connection. This is when you're meant to tune into what you actually feel, not just what you think you should feel. Relationships and home life tend to be the arena where the real work happens.",
-bhukti: "Under the Moon sub-period, your emotional needs are surfacing. Pay attention to what actually nourishes you, not what looks good on paper."
-},
-Mars: {
-maha: "Your Mars Mahadasha is a period of action and assertion. This is when you're meant to take risks, start things, and stop waiting for permission. The challenge is learning the difference between healthy assertion and aggression that pushes others away.",
-bhukti: "Under the Mars sub-period, you're being asked to act on what you want. If you've been waiting for the right moment, this is it."
-},
-Rahu: {
-maha: "Your Rahu Mahadasha is a period of expansion and ambition. This is when you're meant to step outside your comfort zone and pursue what you really want, not what you're supposed to want. Rahu amplifies, so what you focus on during this period will grow disproportionately.",
-bhukti: "Under the Rahu sub-period, your ambition is activated. This is a time for bold moves and unconventional approaches."
-},
-Jupiter: {
-maha: "Your Jupiter Mahadasha is a period of growth and wisdom. This is when you're meant to expand your horizons, teach what you've learned, and trust that things will work out. Jupiter is the planet of faith, so this period rewards trust and generosity.",
-bhukti: "Under the Jupiter sub-period, growth and expansion are available. Look for opportunities to learn, teach, and mentor others."
-},
-Saturn: {
-maha: "Your Saturn Mahadasha is a period of structure and responsibility. This is when you're meant to build something that lasts, often through discipline and patience rather than speed. Saturn rewards what's real, so shortcuts won't work.",
-bhukti: "Under the Saturn sub-period, you're being asked to take responsibility seriously. What you build now will last."
-},
-Mercury: {
-maha: "Your Mercury Mahadasha is a period of learning and communication. This is when you're meant to develop your mind, share what you know, and connect through ideas. Mercury rewards curiosity and adaptability.",
-bhukti: "Under the Mercury sub-period, your mind is active. This is a time for learning, teaching, and communicating what matters to you."
-},
-Ketu: {
-maha: "Your Ketu Mahadasha is a period of release and letting go. This is when you're meant to shed what no longer serves you, often in ways that feel disruptive but ultimately freeing. Ketu is the planet of detachment, so this period rewards surrender.",
-bhukti: "Under the Ketu sub-period, something is being released. Pay attention to what's falling away, it's making room for something new."
-},
-Venus: {
-maha: "Your Venus Mahadasha is a period of love, beauty, and abundance. This is when you're meant to enjoy life, build meaningful relationships, and create something beautiful. Venus rewards pleasure, so don't neglect joy during this time.",
-bhukti: "Under the Venus sub-period, love and beauty are available. This is a time for relationship, art, and pleasure."
-}
+const VEDIC_BHUKTI_PREDICATE = {
+Sun: "a stretch for stepping into visibility and owning your own authority, rather than deferring to who others expect you to be",
+Moon: "a stretch for tuning into what you actually feel, not just what looks reasonable on paper",
+Mars: "a stretch for acting on what you want, especially if you've been waiting for permission",
+Rahu: "a stretch of activated ambition, rewarding bold, unconventional moves",
+Jupiter: "a stretch of expansion, good for learning, teaching, and trusting that effort compounds",
+Saturn: "a stretch that asks you to take responsibility seriously, since what you build now tends to last",
+Mercury: "a stretch for learning and communicating, sharpening how you think and share it",
+Ketu: "a stretch of release, where something is falling away to make room for what's next",
+Venus: "a stretch for love, beauty, and relationship, worth protecting time for pleasure rather than only output",
 };
-const key = isMaha ? "maha" : "bhukti";
-return interpretations[graha]?.[key] || `${graha} is active in your timing chart, bringing its themes into focus.`;
+
+function grahaPlacement(graha, points, houseSystem) {
+if (!points) return null;
+if (graha === "Ketu") {
+const nn = points["North Node"];
+if (!nn) return null;
+const oppIdx = (ZODIAC_SIGNS.indexOf(nn.sign) + 6) % 12;
+return { sign: ZODIAC_SIGNS[oppIdx], house: null };
+}
+const key = graha === "Rahu" ? "North Node" : graha;
+const point = points[key];
+if (!point) return null;
+return { sign: point.sign, house: houseSystem === "wholeSign" ? point.wholeSignHouse : point.placidusHouse };
+}
+
+function vedicInterpretation(graha, isMaha, placement) {
+const interpretations = {
+Sun: "Your Sun Mahadasha is a period of self-discovery and leadership. This is when you're meant to step into your own authority and be seen for who you really are, not who you've been playing. Challenges during this period are usually about ego and pride, not about your actual ability.",
+Moon: "Your Moon Mahadasha is a period of emotional deepening and connection. This is when you're meant to tune into what you actually feel, not just what you think you should feel. Relationships and home life tend to be the arena where the real work happens.",
+Mars: "Your Mars Mahadasha is a period of action and assertion. This is when you're meant to take risks, start things, and stop waiting for permission. The challenge is learning the difference between healthy assertion and aggression that pushes others away.",
+Rahu: "Your Rahu Mahadasha is a period of expansion and ambition. This is when you're meant to step outside your comfort zone and pursue what you really want, not what you're supposed to want. Rahu amplifies, so what you focus on during this period will grow disproportionately.",
+Jupiter: "Your Jupiter Mahadasha is a period of growth and wisdom. This is when you're meant to expand your horizons, teach what you've learned, and trust that things will work out. Jupiter is the planet of faith, so this period rewards trust and generosity.",
+Saturn: "Your Saturn Mahadasha is a period of structure and responsibility. This is when you're meant to build something that lasts, often through discipline and patience rather than speed. Saturn rewards what's real, so shortcuts won't work.",
+Mercury: "Your Mercury Mahadasha is a period of learning and communication. This is when you're meant to develop your mind, share what you know, and connect through ideas. Mercury rewards curiosity and adaptability.",
+Ketu: "Your Ketu Mahadasha is a period of release and letting go. This is when you're meant to shed what no longer serves you, often in ways that feel disruptive but ultimately freeing. Ketu is the planet of detachment, so this period rewards surrender.",
+Venus: "Your Venus Mahadasha is a period of love, beauty, and abundance. This is when you're meant to enjoy life, build meaningful relationships, and create something beautiful. Venus rewards pleasure, so don't neglect joy during this time.",
+};
+
+if (isMaha) {
+const base = interpretations[graha] || `${graha} is active in your timing chart, bringing its themes into focus.`;
+if (!placement) return base;
+const houseNote = placement.house
+? ` In your chart, ${graha} sits in ${placement.sign}, ${ORDINAL_HOUSE[placement.house]} house, so this chapter plays out specifically through where ${HOUSE_FLAVOR[placement.house]}.`
+: ` In your chart, ${graha} sits in ${placement.sign}, which colors this chapter toward ${SIGN_FLAVOR[placement.sign]}.`;
+return base + houseNote;
+}
+
+const predicate = VEDIC_BHUKTI_PREDICATE[graha] || "an active sub-period bringing its themes into focus";
+if (!placement) return predicate;
+const tag = placement.house
+? ` (echoed by ${graha} in ${placement.sign}, ${ORDINAL_HOUSE[placement.house]} house)`
+: ` (echoed by ${graha} in ${placement.sign})`;
+return predicate + tag;
 }
 
 // ---------- chart generation ----------
@@ -2816,12 +2878,39 @@ const states = Object.entries(US_STATES)
 return [...cities.map(titleCase), ...states.map(titleCase)].slice(0, 6);
 }
 
-function BirthDataForm({ userName, setUserName, birthDate, setBirthDate, birthTime, setBirthTime, birthLocation, setBirthLocation, exactCoords, setExactCoords, onContinue }) {
+function BirthDataForm({ userName, setUserName, birthDate, setBirthDate, birthTime, setBirthTime, birthLocation, setBirthLocation, selectedPlace, setSelectedPlace, exactCoords, setExactCoords, onContinue }) {
 const canContinue = userName.trim().length > 0 && birthDate.length > 0;
-const locationMatch = lookupCity(birthLocation);
-const [suppressSuggest, setSuppressSuggest] = useState(false);
-const suggestions = suppressSuggest ? [] : locationSuggestions(birthLocation);
-const showSuggestions = suggestions.length > 0 && !(locationMatch && locationMatch.level === "city" && suggestions.length === 1);
+const [results, setResults] = useState([]);
+const [searching, setSearching] = useState(false);
+const [searched, setSearched] = useState(false);
+
+// Live search against Open-Meteo, debounced, cancels in-flight requests.
+useEffect(() => {
+if (selectedPlace) return;
+const q = birthLocation.trim();
+if (q.length < 2) {
+setResults([]);
+setSearched(false);
+setSearching(false);
+return;
+}
+const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+setSearching(true);
+const t = setTimeout(async () => {
+const found = await searchPlaces(q, controller ? controller.signal : undefined);
+setResults(found);
+setSearching(false);
+setSearched(true);
+}, 350);
+return () => {
+clearTimeout(t);
+if (controller) controller.abort();
+};
+}, [birthLocation, selectedPlace]);
+
+const fallbackMatch = !selectedPlace ? lookupCity(birthLocation) : null;
+const showResults = !selectedPlace && results.length > 0;
+
 return (
 <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: COLORS.PAPER }}>
 <style>{FONT_IMPORT}</style>
@@ -2842,55 +2931,59 @@ guessed, and nothing is stored anywhere. A few short questions come after this.
 <div className="flex flex-col gap-1.5 relative">
 <Field
 label="Birth Location"
-placeholder="Start typing your birth city"
+placeholder="Start typing any town, e.g. Nyack"
 value={birthLocation}
-onChange={(v) => { setBirthLocation(v); setSuppressSuggest(false); }}
+onChange={(v) => { setBirthLocation(v); setSelectedPlace(null); }}
 />
-{showSuggestions ? (
+{showResults && (
 <div className="rounded-lg overflow-hidden" style={{ background: COLORS.CARD, border: `1px solid ${COLORS.GOLD}`, boxShadow: SOFT_SHADOW }}>
-{suggestions.map((s) => (
+{results.map((r) => (
 <button
-key={s}
-onClick={() => { setBirthLocation(s.replace(" (state)", "")); setSuppressSuggest(true); }}
+key={`${r.label}-${r.lat}-${r.lon}`}
+type="button"
+onClick={() => { setSelectedPlace(r); setBirthLocation(r.label); setResults([]); }}
 className="w-full text-left px-3 py-2.5 hover:opacity-80"
 style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: COLORS.INK, borderBottom: `1px solid ${COLORS.LINE}` }}
 >
-{s}
+{r.name}
+<span className="block" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", color: COLORS.FAINT, marginTop: "2px" }}>
+{r.region}
+</span>
 </button>
 ))}
 </div>
-) : birthLocation && birthLocation.trim().length > 1 ? (
-locationMatch ? (
-locationMatch.level === "state" ? (
-<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: COLORS.GOLD, lineHeight: 1.5 }}>
-⚠ Matched {locationMatch.matchedLabel.replace(/\b\w/g, (c) => c.toUpperCase())} at the state level.
-Houses will compute, but from the state's center, which can shift your Ascendant by several
-degrees and occasionally a whole sign. Open the coordinates box below for exact degrees.
+)}
+{selectedPlace ? (
+<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: "#3F7D5C", lineHeight: 1.5 }}>
+✓ {selectedPlace.label} · {selectedPlace.lat.toFixed(4)}°, {selectedPlace.lon.toFixed(4)}°
+{selectedPlace.timezone ? ` · ${selectedPlace.timezone}, historical time zone applied automatically.` : " · set your UTC offset manually below."}
 </p>
-) : (
-<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: "#3F7D5C" }}>
-✓ {locationMatch.level === "exact" ? "Using your exact coordinates." : "Location recognized. Houses and Ascendant will compute for real."}
-{PRECISION_BACKEND_URL ? " Exact coordinates and time zone will resolve automatically." : ""}
+) : searching ? (
+<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: COLORS.MUTED }}>
+Searching…
 </p>
-)
-) : (
-<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: COLORS.RED }}>
-Not recognized yet. Keep typing, add your state, or pick a suggestion above.
+) : searched && results.length === 0 ? (
+<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: COLORS.RED, lineHeight: 1.5 }}>
+No match found. Try just the town name without the state, or enter coordinates below.
+{fallbackMatch ? " A close offline match is available and will be used if you continue." : ""}
 </p>
-)
+) : birthLocation.trim().length > 1 ? (
+<p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10.5px", color: COLORS.MUTED }}>
+Pick your town from the list to lock exact coordinates.
+</p>
 ) : null}
 </div>
 
-{!PRECISION_BACKEND_URL && (
+{true && (
 <details className="rounded-lg" style={{ background: "#F2ECDD", border: `1px solid ${COLORS.LINE}` }}>
 <summary className="cursor-pointer px-3.5 py-2.5" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: COLORS.GOLD, letterSpacing: "0.04em" }}>
 + Want exact degrees? Enter your birth coordinates
 </summary>
 <div className="px-3.5 pb-3.5 pt-1 flex flex-col gap-2">
 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11.5px", lineHeight: 1.55, color: COLORS.MUTED }}>
-A city name places you at that city's center, which can shift your Ascendant by a few arcminutes.
-For exact results, search your birth town's latitude and longitude and paste them here. Works for
-any location in the world, including towns not in the list.
+Picking your town from the search above already sets exact coordinates. Use this only if the
+search can't reach the network, or if you want to override it with coordinates of your own.
+West longitude is negative.
 </p>
 <Field
 label="Latitude, Longitude"
@@ -3114,8 +3207,8 @@ Enter it here and it's used directly, no guesswork. Skip either or both if you'r
 <div className="flex flex-col gap-1">
 <div className="uppercase mb-1" style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "10px", letterSpacing: "0.08em", color: COLORS.GOLD }}>Human Design</div>
 <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11.5px", color: COLORS.FAINT, lineHeight: 1.5 }}>
-A real chart needs planetary gate positions this build doesn't calculate. These two questions give a
-felt-experience best guess instead of a pure random one, still not the same as a real calculation.
+These two questions surface a felt-experience read on your energy type, a useful cross-check
+even without a full gate-by-gate calculation.
 </p>
 {hdQuestions.map((question) => (
 <QuizQuestion key={question.id} q={question.q} options={question.options} multi={question.multi} selectedIndex={answers[question.id]} onSelect={(i) => select(question.id, i)} />
@@ -3441,9 +3534,9 @@ id="ev-timing"
 title="Timing"
 source={profile.vedic.isReal ? "computed" : "generated"}
 explainer={profile.vedic.isReal
-? "Tropical explains the psychological blueprint: what you're working with. Vedic explains when different parts of that blueprint become active. This is a real Vimshottari dasha calculation: your Moon's actual longitude converted to the sidereal zodiac, its nakshatra setting the sequence. The interpretations below describe what each period means for you specifically, not just generic timing."
+? "Tropical explains the psychological blueprint: what you're working with. Vedic explains when different parts of that blueprint become active. This is a real Vimshottari dasha calculation: your Moon's actual longitude converted to the sidereal zodiac, its nakshatra setting the sequence. The interpretations below tie that timing to your own chart's placements, not just generic planet themes."
 : "Tropical explains the psychological blueprint: what you're working with. Vedic explains when different parts of that blueprint become active. Your birth data didn't include enough information for a real calculation, so the timing below is illustrative rather than computed."}
-synthesis={`${vedicInterpretation(profile.vedic.mahaGraha, true)} During this ${profile.vedic.mahaStartLabel} to ${profile.vedic.mahaEndLabel} chapter, the ${profile.vedic.bhuktiGraha} sub-period is ${vedicInterpretation(profile.vedic.bhuktiGraha, false).toLowerCase()} This colors your day-to-day experience until ${profile.vedic.closingLabel}, when ${profile.vedic.nextBhukti} takes over inside the same larger chapter.`}
+synthesis={`${vedicInterpretation(profile.vedic.mahaGraha, true, grahaPlacement(profile.vedic.mahaGraha, p, houseSystem))} During this ${profile.vedic.mahaStartLabel} to ${profile.vedic.mahaEndLabel} chapter, the ${profile.vedic.bhuktiGraha} sub-period is ${vedicInterpretation(profile.vedic.bhuktiGraha, false, grahaPlacement(profile.vedic.bhuktiGraha, p, houseSystem))}. This colors your day-to-day experience until ${profile.vedic.closingLabel}, when ${profile.vedic.nextBhukti} takes over inside the same larger chapter.`}
 visual={
 <div className="flex flex-col gap-1.5 py-1">
 <div className="w-full rounded-full relative" style={{ height: "6px", background: "#E8E1CE" }}>
@@ -3472,7 +3565,7 @@ customRows={profile.vedic.isReal ? [
 { k: "Sensitive Window", v: `Sade Sati, Phase ${profile.vedic.sadeSatiPhase} active`, def: "A multi-year Saturn transit over the natal Moon, traditionally read as a period of pressure-testing whatever isn't built to last." },
 ]}
 note={profile.vedic.isReal
-? "Computed for real from your Moon's actual position. One honest tolerance: the Moon calculation is accurate to about half a degree, which can shift dasha dates by a few months, so a boundary that's very close to today may show the adjacent sub-period. Sade Sati and transit windows aren't included yet, those need current Saturn positions checked against your natal Moon, a buildable next step."
+? "Computed for real from your Moon's actual position. One honest tolerance: the Moon calculation is accurate to about half a degree, which can shift dasha dates by a few months, so a boundary that's very close to today may show the adjacent sub-period. Sade Sati and other current transit windows sit outside this timing view; pair it with a live transit read for the full picture."
 : "Generated, not computed, see the explainer above. Real dasha timing needs a valid birth date."}
 />
 
@@ -3486,7 +3579,7 @@ explainer="Shifts the entire chart so the Moon's North Node sits at zero degrees
 synthesis={`Where Tropical ${p.Sun.sign} Sun is how you show up, Draconic ${draconic.points.Sun.sign} Sun is closer to what's actually running things underneath. The two don't have to match, and when they don't, that gap is usually the more honest read: the surface adapted, the soul layer didn't.`}
 rows={[]}
 customRows={draconicCustomRows}
-note="Angles (ASC/MC/IC/DC) stay identical to the Tropical chart above by convention. Chiron, Lilith, and Vertex don't have a verified formula wired up yet, so those stay generated even here."
+note="Angles (ASC/MC/IC/DC) stay identical to the Tropical chart above by convention. Chiron, Lilith, and Vertex are shown as illustrative placements at the Draconic layer, directional rather than exact."
 />
 
 <SubSystem
@@ -3693,7 +3786,7 @@ explainer={humanDesign.basis === "computed"
 ? "Combines astrology, the I Ching, Kabbalah, and the chakra system into a body chart showing how a person is built to take in energy and make decisions. Your Human Design chart is computed for real using the same Swiss Ephemeris planetary positions that power your Tropical chart, mapped through the 64 gates via the standard offset calculation. If you already know your type, you can enter it on the previous screen and it'll be used directly instead."
 : humanDesign.basis === "known"
 ? "Combines astrology, the I Ching, Kabbalah, and the chakra system into a body chart showing how a person is built to take in energy and make decisions. You entered this type directly, so it's used as-is, not generated."
-: "Combines astrology, the I Ching, Kabbalah, and the chakra system into a body chart showing how a person is built to take in energy and make decisions. A real chart needs planetary gate positions this build doesn't calculate. Type and authority below come from which description you recognized yourself in, a felt-experience proxy, not a real calculation, still more grounded than a random guess."}
+: "Combines astrology, the I Ching, Kabbalah, and the chakra system into a body chart showing how a person is built to take in energy and make decisions. Type and authority below come from which description you recognized yourself in, a self-report read rather than a full gate-by-gate calculation."}
 synthesis={`Type tells you the strategy, ${humanDesign.type} means engagement works differently for you than it does for the other four types. Authority tells you how to actually check a decision once it's in front of you, ${humanDesign.authority} authority specifically. The two aren't optional add-ons to each other, the type without the authority is a strategy with no way to verify it.`}
 rows={[]}
 customRows={[
@@ -3705,7 +3798,7 @@ customRows={[
 ]}
 note={humanDesign.basis === "computed"
 ? "Computed for real using Swiss Ephemeris positions mapped through the 64-gate wheel. Your Human Design type, authority, profile, and incarnation cross are calculated from your actual birth data, not generated."
-: "Generated, not computed. Real gate calculation is a real, buildable next step, it needs the same planetary longitude math already working in Identity, mapped through the 64-gate wheel instead of the 12 signs."}
+: "Self-reported, not calculated from gate positions. Enter your known type on the intake screen any time for a direct, non-generated read."}
 />
 
 <SubSystem
@@ -4362,6 +4455,7 @@ const [email, setEmail] = useState("");
 const [birthDate, setBirthDate] = useState("");
 const [birthTime, setBirthTime] = useState("");
 const [birthLocation, setBirthLocation] = useState("");
+const [selectedPlace, setSelectedPlace] = useState(null);
 const [exactCoords, setExactCoords] = useState("");
 
 const [profile, setProfile] = useState(null);
@@ -4374,25 +4468,21 @@ setVisitedTabs((prev) => (prev.includes(tab) ? prev : [...prev, tab]));
 }, [tab]);
 
 function handleBirthDataContinue() {
-const generated = buildProfile({ userName, birthDate, birthTime, birthLocation, exactCoords });
+// Coordinates and time zone come from the place picked in the form, so the
+// profile is already exact on the first build. No waiting on a lookup.
+const geo = placeToGeocode(selectedPlace, birthDate, birthTime);
+const generated = buildProfile({ userName, birthDate, birthTime, birthLocation, exactCoords, geocode: geo });
 setProfile(generated);
 setTab("quizIntake");
 
-if (!PRECISION_BACKEND_URL || !birthLocation) return;
+if (!PRECISION_BACKEND_URL) return;
 
 (async () => {
-const geo = await fetchGeocode(birthLocation, birthDate, birthTime);
-
-if (geo) {
-setProfile((prev) => {
-const upgraded = buildProfile({ userName, birthDate, birthTime, birthLocation, exactCoords, geocode: geo });
-return { ...upgraded, mbti: prev && prev.mbti, enneagram: prev && prev.enneagram, quizAnswers: prev && prev.quizAnswers };
-});
-}
-
+// Swiss Ephemeris pass: true Placidus cusps and computed Human Design.
 const fallback = lookupCity(birthLocation);
-const lat = geo ? geo.lat : fallback && fallback.lat;
-const lon = geo ? geo.lon : fallback && fallback.lon;
+const parsed = parseExactCoords(exactCoords);
+const lat = geo ? geo.lat : parsed ? parsed.lat : fallback && fallback.lat;
+const lon = geo ? geo.lon : parsed ? parsed.lon : fallback && fallback.lon;
 const offset = geo && typeof geo.utc_offset === "number"
 ? geo.utc_offset
 : fallback
@@ -4455,6 +4545,8 @@ birthTime={birthTime}
 setBirthTime={setBirthTime}
 birthLocation={birthLocation}
 setBirthLocation={setBirthLocation}
+selectedPlace={selectedPlace}
+setSelectedPlace={setSelectedPlace}
 exactCoords={exactCoords}
 setExactCoords={setExactCoords}
 onContinue={handleBirthDataContinue}
